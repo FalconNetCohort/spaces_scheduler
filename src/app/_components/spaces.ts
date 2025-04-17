@@ -1,27 +1,29 @@
+import dayjs, { Dayjs } from "dayjs";
+
 export interface Space {
   name: string;
-  times: string[];
+  times: { date: Dayjs; times: string[] }[];
 }
 
 export const spaces: Space[] = [
   {
     name: "Space 1",
-    times: ["1700", "1730", "1800"],
+    times: [{ date: dayjs(), times: ["1700", "1830"] }],
   },
   {
     name: "Space 2",
-    times: ["1700", "1830"],
+    times: [{ date: dayjs(), times: ["1700", "1830"] }],
   },
   {
     name: "Space 3",
-    times: ["1700"],
+    times: [{ date: dayjs(), times: ["1700"] }],
   },
   {
     name: "Space 4",
-    times: ["1700"],
+    times: [{ date: dayjs(), times: ["1700", "1830"] }],
   },
   {
     name: "Space 5",
-    times: ["1700"],
+    times: [{ date: dayjs(), times: ["1700", "1830"] }],
   },
 ];

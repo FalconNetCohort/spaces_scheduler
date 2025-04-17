@@ -1,18 +1,21 @@
 import { Space } from "@/app/_components/spaces";
 import { times } from "@/app/_components/times";
 import { Box, Divider, Grid, Paper, Stack, Typography } from "@mui/material";
+import dayjs, { Dayjs } from "dayjs";
 
 // Define the props for the component
 type SpaceTableProps = {
   spaces: Space[];
-  handleStartTime: React.Dispatch<React.SetStateAction<string>>;
-  handleEndTime: React.Dispatch<React.SetStateAction<string>>;
+  day: Dayjs;
+  setStartTime: React.Dispatch<React.SetStateAction<string>>;
+  setEndTime: React.Dispatch<React.SetStateAction<string>>;
 };
 
 export default function SpaceTable({
   spaces,
-  handleStartTime,
-  handleEndTime,
+  day,
+  setStartTime,
+  setEndTime,
 }: SpaceTableProps) {
   return (
     <Paper variant="outlined" sx={{ padding: 2 }}>
@@ -64,112 +67,99 @@ export default function SpaceTable({
                 <Divider />
               </Stack>
 
-              {spaces.map((space) => (
-                <Stack>
-                  <Grid container wrap="nowrap">
-                    {times.map((time) => (
-                      <Grid
-                        key={time}
-                        size={0.75}
-                        sx={{
-                          minWidth: 50,
-                          flexShrink: 0,
-                          height: 32,
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: "100%",
-                            height: "100%",
-                            position: "relative",
-                            display: "flex",
-                          }}
-                        >
-                          {space.times.includes(time) ? (
+              {spaces.map((space) => {
+                const matchedEntry = space.times.find((entry) =>
+                  entry.date.isSame(day, "day")
+                );
+
+                return (
+                  <Stack key={space.name}>
+                    <Grid container wrap="nowrap">
+                      {times.map((time) => {
+                        const halfHourTime =
+                          time.slice(0, 2) + "3" + time.slice(3);
+                        const isTimeAvailable =
+                          matchedEntry?.times.includes(time);
+                        const isHalfHourAvailable =
+                          matchedEntry?.times.includes(halfHourTime);
+
+                        return (
+                          <Grid
+                            key={time}
+                            size={0.75}
+                            sx={{
+                              minWidth: 50,
+                              flexShrink: 0,
+                              height: 32,
+                            }}
+                          >
                             <Box
-                              sx={(theme) => ({
-                                width: "50%",
-                                m: 0.1,
-                                backgroundColor: theme.palette.success.main,
-                                color: theme.palette.getContrastText(
-                                  theme.palette.success.main
-                                ),
-                                cursor: "pointer",
+                              sx={{
+                                width: "100%",
+                                height: "100%",
+                                position: "relative",
                                 display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                "&:hover": {
-                                  backgroundColor: theme.palette.success.dark,
-                                },
-                              })}
-                              onClick={() => {
-                                handleStartTime(time);
-                                handleEndTime(
-                                  time.slice(0, 2) + "3" + time.slice(3)
-                                );
                               }}
                             >
-                              &nbsp;
-                            </Box>
-                          ) : (
-                            <Box
-                              sx={(theme) => ({
-                                width: "50%",
-                                opacity: "50%",
-                                m: 0.1,
-                                backgroundImage: `repeating-linear-gradient(45deg, ${theme.palette.grey[400]} 0px, ${theme.palette.grey[400]} 5px, ${theme.palette.grey[100]} 5px, ${theme.palette.grey[100]} 10px)`,
-                              })}
-                            />
-                          )}
-                          {space.times.includes(
-                            time.slice(0, 2) + "3" + time.slice(3)
-                          ) ? (
-                            <Box
-                              sx={(theme) => ({
-                                width: "50%",
-                                m: 0.1,
-                                backgroundColor: theme.palette.success.main,
-                                color: theme.palette.getContrastText(
-                                  theme.palette.success.main
-                                ),
-                                cursor: "pointer",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                "&:hover": {
-                                  backgroundColor: theme.palette.success.dark,
+                              {[
+                                { available: isTimeAvailable, time },
+                                {
+                                  available: isHalfHourAvailable,
+                                  time: halfHourTime,
                                 },
-                              })}
-                              onClick={() => {
-                                handleStartTime(
-                                  time.slice(0, 2) + "3" + time.slice(3)
-                                );
-                                handleEndTime(
-                                  Number(time) + 100 < 1000
-                                    ? "0" + (Number(time) + 100).toString()
-                                    : (Number(time) + 100).toString()
-                                );
-                              }}
-                            >
-                              &nbsp;
+                              ].map(({ available, time: slotTime }, i) =>
+                                available ? (
+                                  <Box
+                                    key={i}
+                                    sx={(theme) => ({
+                                      width: "50%",
+                                      m: 0.1,
+                                      backgroundColor:
+                                        theme.palette.success.main,
+                                      color: theme.palette.getContrastText(
+                                        theme.palette.success.main
+                                      ),
+                                      cursor: "pointer",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      "&:hover": {
+                                        backgroundColor:
+                                          theme.palette.success.dark,
+                                      },
+                                    })}
+                                    onClick={() => {
+                                      setStartTime(slotTime);
+                                      setEndTime(
+                                        dayjs(slotTime, "HHmm")
+                                          .add(30, "minutes")
+                                          .format("HHmm")
+                                      );
+                                    }}
+                                  >
+                                    &nbsp;
+                                  </Box>
+                                ) : (
+                                  <Box
+                                    key={i}
+                                    sx={(theme) => ({
+                                      width: "50%",
+                                      opacity: "50%",
+                                      m: 0.1,
+                                      backgroundImage: `repeating-linear-gradient(45deg, ${theme.palette.grey[400]} 0px, ${theme.palette.grey[400]} 5px, ${theme.palette.grey[100]} 5px, ${theme.palette.grey[100]} 10px)`,
+                                    })}
+                                  />
+                                )
+                              )}
                             </Box>
-                          ) : (
-                            <Box
-                              sx={(theme) => ({
-                                width: "50%",
-                                opacity: "50%",
-                                m: 0.1,
-                                backgroundImage: `repeating-linear-gradient(45deg, ${theme.palette.grey[400]} 0px, ${theme.palette.grey[400]} 5px, ${theme.palette.grey[100]} 5px, ${theme.palette.grey[100]} 10px)`,
-                              })}
-                            />
-                          )}
-                        </Box>
-                      </Grid>
-                    ))}
-                  </Grid>
-                  <Divider />
-                </Stack>
-              ))}
+                          </Grid>
+                        );
+                      })}
+                    </Grid>
+                    <Divider />
+                  </Stack>
+                );
+              })}
             </Grid>
           </Box>
         </Grid>

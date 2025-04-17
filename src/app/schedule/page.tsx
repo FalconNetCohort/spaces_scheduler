@@ -12,6 +12,8 @@ import SpaceTable from "./_components/SpaceTable";
 import { useState } from "react";
 import { spaces } from "../_components/spaces";
 import { useRouter, useSearchParams } from "next/navigation";
+import dayjs, { Dayjs } from "dayjs";
+import { time } from "console";
 
 export default function Schedule() {
   const searchParams = useSearchParams();
@@ -20,9 +22,10 @@ export default function Schedule() {
   const start = searchParams.get("start");
   const end = searchParams.get("end");
 
-  const [space, handleSpace] = useState<string>(name ? name : "");
-  const [startTime, handleStartTime] = useState<string>(start ? start : "");
-  const [endTime, handleEndTime] = useState<string>(end ? end : "");
+  const [space, setSpace] = useState<string>(name ? name : "");
+  const [date, setDate] = useState<Dayjs>(dayjs());
+  const [startTime, setStartTime] = useState<string>(start ? start : "");
+  const [endTime, setEndTime] = useState<string>(end ? end : "");
 
   return (
     <div>
@@ -43,9 +46,9 @@ export default function Schedule() {
               value={space}
               options={spaces.map((space) => space.name)}
               onChange={(event: any) => {
-                handleStartTime("");
-                handleEndTime("");
-                handleSpace(event.target.textContent);
+                setStartTime("");
+                setEndTime("");
+                setSpace(event.target.textContent);
               }}
               renderInput={(params) => (
                 <TextField {...params} fullWidth label="Space Name" />
@@ -53,7 +56,14 @@ export default function Schedule() {
             />
           </Grid>
           <Grid size={{ xs: 12, md: "auto" }}>
-            <DatePicker label="Date" />
+            <DatePicker
+              value={date}
+              label="Date"
+              onChange={(event) => {
+                setDate(dayjs(event));
+              }}
+              disablePast
+            />
           </Grid>
           <Grid size={12}>
             <SpaceTable
@@ -61,8 +71,9 @@ export default function Schedule() {
                 const match = spaces.find((s) => s.name === space);
                 return match ? [match] : [];
               })()}
-              handleStartTime={handleStartTime}
-              handleEndTime={handleEndTime}
+              day={date}
+              setStartTime={setStartTime}
+              setEndTime={setEndTime}
             />
           </Grid>
           <Grid size={6}>
@@ -72,48 +83,23 @@ export default function Schedule() {
               value={startTime}
               options={(() => {
                 const match = spaces.find((s) => s.name === space);
-                return match
-                  ? (() => {
-                      const availableTimes = match.times.map(Number);
-                      const end = Number(endTime);
-                      const result: string[] = [];
+                const times = match?.times.find((entry) =>
+                  entry.date.isSame(date, "day")
+                )?.times;
+                let start = dayjs(endTime, "HHmm")
+                  .subtract(30, "minutes")
+                  .format("HHmm");
+                let filteredTimes: string[] = [];
+                while (times?.includes(start)) {
+                  filteredTimes.push(start);
+                  start = dayjs(start, "HHmm")
+                    .subtract(30, "minutes")
+                    .format("HHmm");
+                }
 
-                      let next = end;
-                      let minutes = next % 100;
-
-                      if (minutes === 30) {
-                        next -= 30;
-                      } else {
-                        next -= 70;
-                      }
-
-                      while (availableTimes.includes(next)) {
-                        minutes = next % 100;
-                        console.log(next, minutes, result);
-
-                        if (minutes === 30) {
-                          result.push(
-                            next < 1000
-                              ? "0" + next.toString()
-                              : next.toString()
-                          );
-                          next -= 30;
-                        } else {
-                          result.push(
-                            next < 1000
-                              ? "0" + next.toString()
-                              : next.toString()
-                          );
-                          next -= 70;
-                        }
-                      }
-                      return endTime !== "" ? result : match.times;
-                    })()
-                  : [];
+                return endTime === "" ? (times ? times : []) : filteredTimes;
               })()}
-              onChange={(event: any) =>
-                handleStartTime(event.target.textContent)
-              }
+              onChange={(event: any) => setStartTime(event.target.textContent)}
               renderInput={(params) => (
                 <TextField {...params} fullWidth label="Start Time" />
               )}
@@ -126,55 +112,27 @@ export default function Schedule() {
               value={endTime}
               options={(() => {
                 const match = spaces.find((s) => s.name === space);
-                return match
-                  ? (() => {
-                      const availableTimes = match.times.map(Number); // convert to numbers
-                      const start = Number(startTime);
-                      const result: string[] = [];
+                const times = match?.times.find((entry) =>
+                  entry.date.isSame(date, "day")
+                )?.times;
+                let start = startTime;
+                let filteredTimes: string[] = [];
+                while (times?.includes(start)) {
+                  start = dayjs(start, "HHmm")
+                    .add(30, "minutes")
+                    .format("HHmm");
+                  filteredTimes.push(start);
+                }
 
-                      let next = start;
-
-                      while (availableTimes.includes(next)) {
-                        const minutes = next % 100;
-
-                        // Calculate next time in 30-minute steps
-                        if (minutes === 0) {
-                          next += 30;
-                          result.push(
-                            next < 1000
-                              ? "0" + next.toString()
-                              : next.toString()
-                          );
-                        } else {
-                          next += 70; // 30 + 40 to roll over the hour
-                          result.push(
-                            next < 1000
-                              ? "0" + next.toString()
-                              : next.toString()
-                          );
-                        }
-                      }
-                      return startTime != ""
-                        ? result
-                        : availableTimes.map((t) => {
-                            const minutes = t % 100;
-
-                            if (minutes === 0) {
-                              t += 30;
-                              return t < 1000
-                                ? "0" + t.toString()
-                                : t.toString();
-                            } else {
-                              t += 70;
-                              return t < 1000
-                                ? "0" + t.toString()
-                                : t.toString();
-                            }
-                          });
-                    })()
-                  : [];
+                return startTime === ""
+                  ? times
+                    ? times.map((time) =>
+                        dayjs(time, "HHmm").add(30, "minutes").format("HHmm")
+                      )
+                    : []
+                  : filteredTimes;
               })()}
-              onChange={(event: any) => handleEndTime(event.target.textContent)}
+              onChange={(event: any) => setEndTime(event.target.textContent)}
               renderInput={(params) => (
                 <TextField {...params} fullWidth label="End Time" />
               )}
